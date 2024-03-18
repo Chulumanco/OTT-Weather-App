@@ -11,7 +11,7 @@ To clone the repository, run the following command:
 
 bash
 Copy code
-git clone https://github.com/your-username/WeatherApp.git
+git clone https://github.com/Chulumanco/OTT-Weather-App.git
 Running the Application
 To run the application locally, follow these steps:
 
