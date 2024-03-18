@@ -1,57 +1,67 @@
-﻿@page "/weather"
-@inject HttpClient Http
+﻿@page "/historical"
+@using BrowserInterop.Extensions
+@using BrowserInterop.Geolocation
+@using System.ComponentModel.DataAnnotations
+@using WeatherApp.ApiHelper
+@using WeatherApp.Data
+@using WeatherApp.Entities
+@inject Services.WeatherService weatherService
 
-<PageTitle>Weather</PageTitle>
 
-<h1>Weather</h1>
-
-<p>This component demonstrates fetching data from the server.</p>
-
-@if (forecasts == null)
-{
-    <p><em>Loading...</em></p>
-}
-else
+@if (weatherCorrectionInfoList != null && weatherCorrectionInfoList.Any())
 {
     <table class="table">
         <thead>
             <tr>
-                <th>Date</th>
-                <th>Temp. (C)</th>
-                <th>Temp. (F)</th>
-                <th>Summary</th>
+             
+                <th>Recorded At</th>
+                <th>By</th>
+                <th>Where</th>
+                <th>Temperature</th>
+                <th>Condition</th>
+                <th>Humidity</th>
+                <th>Clouds</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var forecast in forecasts)
+            @foreach (var item in weatherCorrectionInfoList)
             {
                 <tr>
-                    <td>@forecast.Date.ToShortDateString()</td>
-                    <td>@forecast.TemperatureC</td>
-                    <td>@forecast.TemperatureF</td>
-                    <td>@forecast.Summary</td>
+                    <td>@item.RecordedAt</td>
+                    <td>@item.Name @item.Surname </td>
+                    <td>@item.CurrentLocation</td>
+                    <td>@item.Temperature</td>
+                    <td>@item.WeatherCondition</td>
+                    <td>@item.Humidity</td>
+                    <td>@item.Clouds</td>
+
                 </tr>
             }
         </tbody>
     </table>
 }
-
+else
+{
+    <p>No weather history available.</p>
+}
 @code {
-    private WeatherForecast[]? forecasts;
+    private List<WeatherCorrectionInfo> weatherCorrectionInfoList;
 
     protected override async Task OnInitializedAsync()
     {
-        forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("sample-data/weather.json");
-    }
-
-    public class WeatherForecast
-    {
-        public DateOnly Date { get; set; }
-
-        public int TemperatureC { get; set; }
-
-        public string? Summary { get; set; }
-
-        public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+        try
+        {
+            weatherCorrectionInfoList = await weatherService.GetWeatherHistoryListAsync();
+        }
+        catch (ApiException ex)
+        {
+            // Handle API exception
+            Console.WriteLine($"API Exception: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            // Handle other exceptions
+            Console.WriteLine($"An error occurred: {ex.Message}");
+        }
     }
 }

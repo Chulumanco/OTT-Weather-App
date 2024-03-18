@@ -1,7 +1,196 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+@using BrowserInterop.Extensions
+@using BrowserInterop.Geolocation
+@using System.ComponentModel.DataAnnotations
+@using WeatherApp.Data
+@using WeatherApp.Entities
+@using GoogleMapsComponents.Maps
+@inject IJSRuntime jsRuntime
+@inject Services.WeatherService weatherService
+@inject NavigationManager uriHelper;
 
-<h1>Hello, world!</h1>
+<div class="container">
+    <div class="row justify-content-end mt-3">
+        @if (response == null)
+        {
+            <div class="col-auto">
+                <button type="button" class="btn btn-success" @onclick="GetLocationWeather">Get Local Weather</button>
+        </div>
+        }
+      else
+        {
+            <div class="col-auto">
 
-Welcome to your new app.
+                <div class="dropdown">
+                    <button class="btn btn-info dropdown-toggle" type="button" id="weatherCorrect" data-bs-toggle="dropdown" aria-expanded="false">
+                        Correct Reading?
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="weatherCorrect">
+                        <li><a class="dropdown-item active" href="#">Yes</a></li>
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#correctReadingModal">No</a></li>
+                    </ul>
+                </div>
+
+             
+            </div>
+        }
+    </div>
+
+    <div class="row mt-3">
+        <div class="col">
+            @if (response != null)
+            {
+                <h3>@response.location.name, @response.location.region, @response.location.country</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Temperature</th>
+                            <th>Condition</th>
+                            <th>Humidity</th>
+                            <th>Cloud Cover</th>
+                            <th>Last Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>@response.current.temp_c °C / @response.current.temp_f °F</td>
+                            <td>@response.current.condition.text</td>
+                            <td>@response.current.humidity %</td>
+                            <td>@response.current.cloud %</td>
+                            <td>@response.current.last_updated</td>
+                        </tr>
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="container">
+                    <div class="row justify-content-center mt-5">
+                        <div class="col-md-8 text-center">
+                            <h2 class="display-4">Welcome to the OOTT Weather App!</h2>
+                            <p class="lead">Click the "Get Local Weather" button to get your local weather readings.</p>
+                            
+                        </div>
+                    </div>
+                </div>
+
+            }
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col">
+            <div id="map" style="height: 400px;"></div>
+        </div>
+    </div>
+    <div class="modal fade" id="correctReadingModal" tabindex="-1" aria-labelledby="correctReadingModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="correctReadingModalLabel">Correct Readings</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@weatherCorrectionInfo" OnValidSubmit="SaveChanges">
+                        <h5> Users details </h5>
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Name</label>
+                            <InputText @bind-Value="weatherCorrectionInfo.Name" id="name" class="form-control" />
+                            <ValidationMessage For="@(() => weatherCorrectionInfo.Name)" />
+                        </div>
+                         <div class="mb-3">
+                            <label for="surname" class="form-label">Surname</label>
+                            <InputText @bind-Value="weatherCorrectionInfo.Surname" id="surname" class="form-control" />
+                            <ValidationMessage For="@(() => weatherCorrectionInfo.Surname)" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="currentLocation" class="form-label">Current Location</label>
+                            <InputText @bind-Value="weatherCorrectionInfo.CurrentLocation" id="currentLocation" class="form-control" />
+                            <ValidationMessage For="@(() => weatherCorrectionInfo.CurrentLocation)" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="temperature" class="form-label">Temperature</label>
+                            <InputNumber @bind-Value="weatherCorrectionInfo.Temperature" id="temperature" class="form-control" />
+                            <ValidationMessage For="@(() => weatherCorrectionInfo.Temperature)" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="weatherCondition" class="form-label">Weather Conditions</label>
+                            <InputText @bind-Value="weatherCorrectionInfo.WeatherCondition" id="weatherCondition" class="form-control" Placeholder ="Clear with periodic clouds" />
+                            <ValidationMessage For="@(() => weatherCorrectionInfo.WeatherCondition)" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="humidity" class="form-label">Humidity</label>
+                            <InputNumber @bind-Value="weatherCorrectionInfo.Humidity" id="humidity" class="form-control" />
+                            <ValidationMessage For="@(() => weatherCorrectionInfo.Humidity)" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="Clouds" class="form-label">Clouds</label>
+                            <InputNumber @bind-Value="weatherCorrectionInfo.Clouds" id="clouds" class="form-control" />
+                            <ValidationMessage For="@(() => weatherCorrectionInfo.Clouds)" />
+                        </div>
+                        
+                        <!-- Add similar markup for other fields -->
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+  
+</div>
+
+@code {
+    private WindowNavigatorGeolocation geolocationWrapper;
+    private GeolocationPosition currentPosition;
+    private RootobjectModel response;
+    private WeatherCorrectionInfo weatherCorrectionInfo = new WeatherCorrectionInfo();
+    private string saveMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var window = await jsRuntime.Window();
+        var navigator = await window.Navigator();
+        geolocationWrapper = navigator.Geolocation;
+    }
+
+    public async Task GetLocationWeather()
+    {
+        currentPosition = (await geolocationWrapper.GetCurrentPosition(new PositionOptions()
+            {
+                EnableHighAccuracy = true,
+                MaximumAgeTimeSpan = TimeSpan.FromHours(1),
+                TimeoutTimeSpan = TimeSpan.FromMinutes(1)
+            })).Location;
+
+        if (currentPosition != null)
+        {
+            response = await weatherService.GetWeatherAsync(currentPosition.Coords.Latitude, currentPosition.Coords.Longitude);
+            await InitializeMap(currentPosition.Coords.Latitude, currentPosition.Coords.Longitude);
+        }
+    }
+
+    private async Task InitializeMap(double latitude, double longitude)
+    {
+        await jsRuntime.InvokeVoidAsync("initialize", latitude, longitude);
+    }
+    private async Task SaveChanges()
+    {
+
+        var validationResults = new List<ValidationResult>();
+        var isValid = Validator.TryValidateObject(weatherCorrectionInfo, new ValidationContext(weatherCorrectionInfo), validationResults, true);
+
+        if (isValid)
+        {
+            await weatherService.SaveWeatherDetailsAsync(weatherCorrectionInfo);
+            var timer = new Timer(new TimerCallback(_ =>
+             {
+                 uriHelper.NavigateTo(uriHelper.Uri, forceLoad: true);
+             }), null, 2000, 2000);
+        }
+    }
+
+}

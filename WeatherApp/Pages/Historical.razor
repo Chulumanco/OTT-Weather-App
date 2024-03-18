@@ -1,0 +1,54 @@
+﻿@using BrowserInterop.Extensions
+@using BrowserInterop.Geolocation
+@using System.ComponentModel.DataAnnotations
+@using WeatherApp.ApiHelper
+@using WeatherApp.Data
+@using WeatherApp.Entities
+@inject Services.WeatherService weatherService
+
+
+@if (weatherCorrectionInfoList != null && weatherCorrectionInfoList.Any())
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Recorded At</th>
+               
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in weatherCorrectionInfoList)
+            {
+                <tr>
+                    <td>@item.RecordedAt</td>
+                    
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No weather history available.</p>
+}
+@code {
+private List<WeatherCorrectionInfo> weatherCorrectionInfoList;
+
+protected override async Task OnInitializedAsync()
+{
+    try
+    {
+            weatherCorrectionInfoList = await weatherService.GetWeatherHistoryListAsync();
+    }
+    catch (ApiException ex)
+    {
+        // Handle API exception
+        Console.WriteLine($"API Exception: {ex.Message}");
+    }
+    catch (Exception ex)
+    {
+        // Handle other exceptions
+        Console.WriteLine($"An error occurred: {ex.Message}");
+    }
+   }
+}
