@@ -1,13 +1,12 @@
 
 using BlazorLeafletInterop.Services;
-using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.EntityFrameworkCore;
 using WeatherApp;
 using WeatherApp.ApiHelper;
-using WeatherApp.Data;
 using WeatherApp.Services;
+
+
 
 
 
@@ -20,9 +19,10 @@ builder.Services.AddMapService();
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
-//Revisit,  APIConfig coming back as null
-//builder.Services.Configure<ApiConfig>(builder.Configuration.GetSection("APIConfig"));
-
+ builder.Services.Configure<ApiConfig>(
+    builder.Configuration.GetSection("APIConfig"));
+var hostname = configuration["APIConfig:Host"];
+Console.WriteLine("Hostname: " + hostname);
 builder.Services.AddScoped<WeatherService>();
 
 
