@@ -9,6 +9,7 @@ using WeatherApp.Entities;
 using System.Net.Http.Json;
 using System.Net;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 
 namespace WeatherApp.Services
 {
@@ -18,24 +19,26 @@ namespace WeatherApp.Services
         private readonly HttpClient _httpClient;
        
 
-        // private readonly ApiConfig _apiSettings;
+        private readonly IConfiguration _configuration;
 
 
-        public WeatherService( HttpClient httpClient, IOptions<ApiConfig> apiSettings)
+        public WeatherService( HttpClient httpClient, IConfiguration configuration)
         {
    
             _httpClient = httpClient;
-            // _apiSettings = apiSettings.Value;
+            _configuration = configuration;
+            
         }
 
 
         public async Task<RootobjectModel> GetWeatherAsync(double latitude, double longitude)
         {
-            string apiUrl = $"https://weatherapi-com.p.rapidapi.com/current.json?q={Convert.ToDecimal(latitude)}%2C{Convert.ToDecimal(longitude)}";
+           
+            string apiUrl = $"{GetApiConfig().Url}{Convert.ToDecimal(latitude)}%2C{Convert.ToDecimal(longitude)}";
 
             var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
-            request.Headers.Add("X-RapidAPI-Key", "11f3b87131msha98d8a5c8282a77p10b896jsnc45b7bbd3f42");
-            request.Headers.Add("X-RapidAPI-Host", "weatherapi-com.p.rapidapi.com");
+            request.Headers.Add("X-RapidAPI-Key", GetApiConfig().Key);
+            request.Headers.Add("X-RapidAPI-Host", GetApiConfig().Host);
 
             try
             {
@@ -58,26 +61,13 @@ namespace WeatherApp.Services
             }
         }
 
-        //public async Task SaveWeatherDetailsAsync(WeatherCorrectionInfo weatherDetails)
-        //{
-        //    try
-        //    {
-        //        weatherDetails.RecordedAt = DateTime.Now;
-        //        _context.WeatherCorrectionInfos.Add(weatherDetails);
-        //        await _context.SaveChangesAsync();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"An error occurred while saving weather details: {ex.Message}");
-        //        throw; 
-        //    }
-        //}
+
        
         public async Task<(string ResponseContent, HttpStatusCode StatusCode)> SaveWeatherDetailsAsync(WeatherCorrectionInfo data)
         {
             try
             {
-                string fullUrl = "https://localhost:7278/api/weather/saveweather";
+                string fullUrl = $"{GetApiConfig().WeatherApiUrl}/saveweather";
                 HttpResponseMessage response = await _httpClient.PostAsJsonAsync(fullUrl, data);
                 response.EnsureSuccessStatusCode();
 
@@ -97,7 +87,7 @@ namespace WeatherApp.Services
         {
             try
             {
-                string fullUrl = "https://localhost:7278/api/weather/history";
+                string fullUrl = $"{GetApiConfig().WeatherApiUrl}/history";
 
                 var response = await _httpClient.GetAsync(fullUrl);
 
@@ -118,6 +108,26 @@ namespace WeatherApp.Services
             {
                 Console.WriteLine($"An error occurred: {ex.Message}");
                 throw new ApiException($"An error occurred: {ex.Message}");
+            }
+        }
+        private ApiConfig GetApiConfig()
+        {
+            try
+            { 
+                return new ApiConfig
+                {
+                    Host = _configuration["APIConfig:Host"],
+                    Key = _configuration["APIConfig:Key"],
+                    Url = _configuration["APIConfig:Url"],
+                    WeatherApiUrl = _configuration["APIConfig:WeatherApiUrl"],
+                };
+            }
+            catch (Exception ex)
+            {
+                // Handle exception
+                Console.WriteLine("An error occurred while fetching API configuration:");
+                Console.WriteLine(ex.Message);
+                return null; // or throw the exception if appropriate
             }
         }
 

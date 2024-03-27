@@ -9,6 +9,7 @@
 @inject IJSRuntime jsRuntime
 @inject Services.WeatherService weatherService
 @inject NavigationManager uriHelper;
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 <div class="container">
     <div class="row justify-content-end mt-3">
@@ -149,12 +150,15 @@
     private RootobjectModel response;
     private WeatherCorrectionInfo weatherCorrectionInfo = new WeatherCorrectionInfo();
     private string saveMessage;
+     private string WeatherApiUrl;
 
+   
     protected override async Task OnInitializedAsync()
     {
         var window = await jsRuntime.Window();
         var navigator = await window.Navigator();
         geolocationWrapper = navigator.Geolocation;
+        WeatherApiUrl = Configuration.GetValue<string>("WeatherApi:ApiUrl");
     }
 
     public async Task GetLocationWeather()
